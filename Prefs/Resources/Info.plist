@@ -1,0 +1,13 @@
+{
+    CFBundleDevelopmentRegion = "English";
+    CFBundleExecutable = "BlockAdPrefs";
+    CFBundleIdentifier = "com.blockad.tweak.prefsbundle";
+    CFBundleInfoDictionaryVersion = "6.0";
+    CFBundleIconFiles = ( BlockAdIcon );
+    CFBundleLocalizations = ( en );
+    CFBundleName = "BlockAdPrefs";
+    CFBundlePackageType = "BNDL";
+    CFBundleShortVersionString = "1.0.0";
+    CFBundleVersion = "1.0.0";
+    NSPrincipalClass = "BlockAdPrefsListController";
+}

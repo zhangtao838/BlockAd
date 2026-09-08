@@ -1,0 +1,73 @@
+name: Build BlockAd
+
+# 手动触发 / 推到 main 或打 tag / 每周一凌晨自动重刷拦截表出一个新包
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+  schedule:
+    - cron: '0 0 * * 1'
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest          # 自带最新 Xcode iOS SDK（26.5 那代），已验证可正常出包
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps (dpkg + ldid + xz)
+        run: brew install dpkg ldid xz || true
+
+      - name: Clone Theos (roothide fork) & 加入 PATH
+        run: |
+          git clone --recursive https://github.com/roothide/theos.git "${{ github.workspace }}/theos"
+          echo "THEOS=${{ github.workspace }}/theos" >> "$GITHUB_ENV"
+          echo "${{ github.workspace }}/theos/bin" >> "$GITHUB_PATH"
+
+      - name: Fix fakeroot on Apple Silicon
+        run: |
+          sed -i '' 's/$(FAKEROOT) -c/true/' "$THEOS/makefiles/stage.mk"
+          sed -i '' 's/$(FAKEROOT) -r //' "$THEOS/makefiles/package/deb.mk"
+
+      - name: Install Preferences headers into $THEOS/include
+        run: |
+          git clone --depth 1 https://github.com/theos/headers /tmp/theos-headers
+          mkdir -p "$THEOS/include"
+          cp -R /tmp/theos-headers/Preferences "$THEOS/include/"
+          cp -R /tmp/theos-headers/SpringBoardServices "$THEOS/include/" 2>/dev/null || true
+
+      - name: Generate ad-domain blocklist from open-source lists
+        run: python3 scripts/make-blocklist.py
+
+      - name: Run core-logic unit tests
+        run: |
+          make -C test
+          ./test/t_blocklist
+
+      - name: Build .deb (Release, roothide scheme)
+        run: |
+          make clean
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+
+      - name: Publish rules to GitHub Release (插件自动更新用)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LIST="${{ github.workspace }}/layout/Library/BlockAd/blocklist.txt"
+          gh release delete rules --yes 2>/dev/null || true
+          gh release create rules "$LIST" \
+            --title "BlockAd 规则" --notes "CI 自动生成，插件内置自动更新使用" || true
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: BlockAd-deb
+          path: packages/*.deb
+          if-no-files-found: error

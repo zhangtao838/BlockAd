@@ -1,0 +1,9 @@
+Package: com.blockad.tweak
+Name: BlockAd 去广告
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: 免VPN的DNS级去广告插件：注入App拦截广告与统计域名，替代常开代理/VPN（支持Relaxin隐根/roothide）
+Depends: mobilesubstrate (>= 0.9.7000), preferenceloader (>= 2.2.4-9)
+Section: Tweaks
+Author: BlockAd
+Maintainer: BlockAd
